@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SCV Time Attendance</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,sans-serif;background:#f3f7f5;color:#173128}
+.wrap{max-width:600px;margin:auto;padding:22px 16px 50px}.brand{display:flex;gap:13px;align-items:center;margin-bottom:18px}
+.logo{width:56px;height:56px;border-radius:18px;background:#0b6b4b;color:white;display:grid;place-items:center;font-weight:900}
+.card{background:white;border:1px solid #dce7e2;border-radius:22px;padding:20px;margin:14px 0;box-shadow:0 10px 30px rgba(20,60,45,.07)}
+h1{font-size:24px;margin:0}h2{margin-top:0}.muted{color:#697970}label{display:block;font-weight:700;margin:12px 0}
+input{width:100%;padding:14px;margin-top:7px;border:1px solid #dce7e2;border-radius:14px;font-size:16px}
+button{border:0;border-radius:14px;padding:14px 16px;font-size:16px;font-weight:800}button:disabled{opacity:.45}
+.green{background:#0b6b4b;color:white}.soft{background:#e7f4ee;color:#0b6b4b}.ghost{background:#f4f8f6;border:1px solid #dce7e2}
+.full{width:100%}.hidden{display:none}.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.clock{font-size:46px;font-weight:900;text-align:center}.date{text-align:center;color:#697970;margin-bottom:15px}
+.loc{background:#f7faf8;border:1px solid #dce7e2;border-radius:16px;padding:15px;margin:14px 0}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.actions button{min-height:62px}
+.msg{margin-top:12px;font-weight:700}.history{padding:12px 0;border-bottom:1px solid #e4ebe7}.badge{background:#e7f4ee;color:#0b6b4b;padding:5px 9px;border-radius:999px;font-weight:800}
+</style></head>
+<body><main class="wrap">
+<header class="brand"><div class="logo">SCV</div><div><h1>SCV Time Attendance</h1><div class="muted">ระบบลงเวลาเข้า–ออกงาน</div></div></header>
+<section id="login" class="card"><h2>เข้าสู่ระบบ</h2>
+<label>อีเมล<input id="email" type="email"></label><label>รหัสผ่าน<input id="password" type="password"></label>
+<button id="loginBtn" class="green full">เข้าสู่ระบบ</button><div id="loginMsg" class="msg"></div></section>
+<section id="app" class="hidden">
+<section class="card row"><div><b id="name">-</b><div id="meta" class="muted">-</div></div><button id="logout" class="ghost">ออกจากระบบ</button></section>
+<section class="card"><div id="clock" class="clock"></div><div id="date" class="date"></div>
+<div class="loc"><b id="locStatus">กำลังตรวจ GPS...</b><div id="locDetail" class="muted"></div></div>
+<button id="gps" class="ghost full">ตรวจ GPS ใหม่</button>
+<div class="actions"><button id="in" class="green" disabled>เข้างาน</button><button id="out" class="soft" disabled>ออกงาน</button></div>
+<div id="punchMsg" class="msg"></div></section>
+<section class="card"><div class="row"><h2>ประวัติวันนี้</h2><button id="reload" class="ghost">รีเฟรช</button></div><div id="history" class="muted">ยังไม่มีรายการ</div></section>
+</section></main>
+<script>
+const URL="https://osqbqcgysyxmwutyhbeh.supabase.co";
+const KEY="sb_publishable_k1Y-P-o_UktDJdrbGr9eiw_tNRVvKEt";
+const sb=window.supabase.createClient(URL,KEY);
+let profile,company,pos,distanceM;
+const $=x=>document.getElementById(x);
+function time(d=new Date()){return new Intl.DateTimeFormat("th-TH",{timeZone:"Asia/Bangkok",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(d)}
+function dateTH(){return new Intl.DateTimeFormat("th-TH",{timeZone:"Asia/Bangkok",dateStyle:"full"}).format(new Date())}
+function workDate(){return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())}
+setInterval(()=>{$("clock").textContent=time();$("date").textContent=dateTH()},500);
+function dist(a,b,c,d){const R=6371000,r=x=>x*Math.PI/180,x=r(c-a),y=r(d-b),q=Math.sin(x/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(q))}
+async function boot(){
+ const {data:{session}}=await sb.auth.getSession();if(!session)return;
+ const {data:p,error:pe}=await sb.from("profiles").select("*").eq("id",session.user.id).single();if(pe){$("loginMsg").textContent=pe.message;return}profile=p;
+ const {data:c,error:ce}=await sb.from("company_settings").select("*").limit(1).single();if(ce){$("loginMsg").textContent=ce.message;return}company=c;
+ $("name").textContent=p.full_name||p.email;$("meta").textContent=[p.employee_code,p.department,p.role].filter(Boolean).join(" • ");
+ $("login").classList.add("hidden");$("app").classList.remove("hidden");await history();gps();
+}
+async function login(){const {error}=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(error){$("loginMsg").textContent=error.message;return}boot()}
+function gps(){$("in").disabled=$("out").disabled=true;navigator.geolocation.getCurrentPosition(p=>{pos=p;distanceM=dist(p.coords.latitude,p.coords.longitude,+company.factory_lat,+company.factory_lng);const ok=distanceM<=+company.radius_m;$("locStatus").textContent=ok?"✅ อยู่ในพื้นที่ลงเวลา":"❌ อยู่นอกพื้นที่ลงเวลา";$("locDetail").textContent=`ห่างประมาณ ${Math.round(distanceM)} เมตร • GPS ±${Math.round(p.coords.accuracy)} ม.`;$("in").disabled=$("out").disabled=!ok},e=>{$("locStatus").textContent="ยังไม่ได้ตำแหน่ง";$("locDetail").textContent=e.message},{enableHighAccuracy:true,timeout:15000})}
+async function punch(type){if(!pos)return;const row={employee_id:profile.id,work_date:workDate(),punch_type:type,punched_at:new Date().toISOString(),latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy_m:pos.coords.accuracy,distance_m:distanceM};const {error}=await sb.from("attendance_punches").insert(row);$("punchMsg").textContent=error?error.message:(type==="IN"?"✅ บันทึกเวลาเข้างานแล้ว":"✅ บันทึกเวลาออกงานแล้ว");if(!error)history()}
+async function history(){const {data,error}=await sb.from("attendance_punches").select("*").eq("employee_id",profile.id).eq("work_date",workDate()).order("punched_at",{ascending:false});if(error){$("history").textContent=error.message;return}$("history").innerHTML=data?.length?data.map(x=>`<div class="history"><span class="badge">${x.punch_type==="OUT"?"ออกงาน":"เข้างาน"}</span> ${time(new Date(x.punched_at))} <div class="muted">ระยะประมาณ ${Math.round(+x.distance_m||0)} เมตร</div></div>`).join(""):"ยังไม่มีรายการวันนี้"}
+$("loginBtn").onclick=login;$("gps").onclick=gps;$("in").onclick=()=>punch("IN");$("out").onclick=()=>punch("OUT");$("reload").onclick=history;$("logout").onclick=async()=>{await sb.auth.signOut();location.reload()};
+boot();
+</script></body></html>
