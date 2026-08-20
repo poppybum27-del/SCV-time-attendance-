@@ -57,4 +57,22 @@ async function punch(type){if(!pos)return;const row={employee_id:profile.id,work
 async function history(){const {data,error}=await sb.from("attendance_punches").select("*").eq("employee_id",profile.id).eq("work_date",workDate()).order("punched_at",{ascending:false});if(error){$("history").textContent=error.message;return}$("history").innerHTML=data?.length?data.map(x=>`<div class="history"><span class="badge">${x.punch_type==="OUT"?"ออกงาน":"เข้างาน"}</span> ${time(new Date(x.punched_at))} <div class="muted">ระยะประมาณ ${Math.round(+x.distance_m||0)} เมตร</div></div>`).join(""):"ยังไม่มีรายการวันนี้"}
 $("loginBtn").onclick=login;$("gps").onclick=gps;$("in").onclick=()=>punch("IN");$("out").onclick=()=>punch("OUT");$("reload").onclick=history;$("logout").onclick=async()=>{await sb.auth.signOut();location.reload()};
 boot();
+ sb.auth.onAuthStateChange((event) => {
+  if (event === "PASSWORD_RECOVERY") {
+    const newPassword = prompt("กรอกรหัสผ่านใหม่อย่างน้อย 6 ตัวอักษร");
+    if (!newPassword || newPassword.length < 6) {
+      alert("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
+      return;
+    }
+
+    sb.auth.updateUser({ password: newPassword }).then(({ error }) => {
+      if (error) {
+        alert("ตั้งรหัสผ่านไม่สำเร็จ: " + error.message);
+      } else {
+        alert("ตั้งรหัสผ่านใหม่สำเร็จแล้ว");
+        window.location.href = window.location.pathname;
+      }
+    });
+  }
+});
 </script></body></html>
