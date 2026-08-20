@@ -58,7 +58,7 @@ async function history(){const {data,error}=await sb.from("attendance_punches").
 $("loginBtn").onclick=login;$("gps").onclick=gps;$("in").onclick=()=>punch("IN");$("out").onclick=()=>punch("OUT");$("reload").onclick=history;$("logout").onclick=async()=>{await sb.auth.signOut();location.reload()};
 boot();
  sb.auth.onAuthStateChange((event) => {
-  if (event === "PASSWORD_RECOVERY") {
+  if (event === "PASSWORD_RECOVERY" || location.hash.includes("type=recovery") || location.search.includes("type=recovery")) {
     const newPassword = prompt("กรอกรหัสผ่านใหม่อย่างน้อย 6 ตัวอักษร");
     if (!newPassword || newPassword.length < 6) {
       alert("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
