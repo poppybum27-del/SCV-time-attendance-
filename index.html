@@ -37,6 +37,7 @@ button{border:0;border-radius:14px;padding:14px 16px;font-size:16px;font-weight:
 const URL="https://osqbqcgysyxmwutyhbeh.supabase.co";
 const KEY="sb_publishable_k1Y-P-o_UktDJdrbGr9eiw_tNRVvKEt";
 const sb=window.supabase.createClient(URL,KEY);
+ sb.auth.onAuthStateChange((event)=>{if(event==="PASSWORD_RECOVERY") window.__recovery=true;});
 let profile,company,pos,distanceM;
 const $=x=>document.getElementById(x);
 function time(d=new Date()){return new Intl.DateTimeFormat("th-TH",{timeZone:"Asia/Bangkok",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(d)}
@@ -56,9 +57,8 @@ function gps(){$("in").disabled=$("out").disabled=true;navigator.geolocation.get
 async function punch(type){if(!pos)return;const row={employee_id:profile.id,work_date:workDate(),punch_type:type,punched_at:new Date().toISOString(),latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy_m:pos.coords.accuracy,distance_m:distanceM};const {error}=await sb.from("attendance_punches").insert(row);$("punchMsg").textContent=error?error.message:(type==="IN"?"✅ บันทึกเวลาเข้างานแล้ว":"✅ บันทึกเวลาออกงานแล้ว");if(!error)history()}
 async function history(){const {data,error}=await sb.from("attendance_punches").select("*").eq("employee_id",profile.id).eq("work_date",workDate()).order("punched_at",{ascending:false});if(error){$("history").textContent=error.message;return}$("history").innerHTML=data?.length?data.map(x=>`<div class="history"><span class="badge">${x.punch_type==="OUT"?"ออกงาน":"เข้างาน"}</span> ${time(new Date(x.punched_at))} <div class="muted">ระยะประมาณ ${Math.round(+x.distance_m||0)} เมตร</div></div>`).join(""):"ยังไม่มีรายการวันนี้"}
 $("loginBtn").onclick=login;$("gps").onclick=gps;$("in").onclick=()=>punch("IN");$("out").onclick=()=>punch("OUT");$("reload").onclick=history;$("logout").onclick=async()=>{await sb.auth.signOut();location.reload()};
-
- sb.auth.onAuthStateChange((event) => {
-  if (event === "PASSWORD_RECOVERY" || location.hash.includes("type=recovery") || location.search.includes("type=recovery")) {
+sb.auth.onAuthStateChange((event) => {
+  if (event === "PASSWORD_RECOVERY"|| window.__recovery
     const newPassword = prompt("กรอกรหัสผ่านใหม่อย่างน้อย 6 ตัวอักษร");
     if (!newPassword || newPassword.length < 6) {
       alert("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
