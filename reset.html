@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ตั้งรหัสผ่านใหม่ | SCV</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{font-family:Arial,sans-serif;background:#f3f8f5;margin:0;padding:25px;color:#173b2e}
+.card{max-width:500px;margin:60px auto;background:#fff;padding:28px;border-radius:24px}
+h1{margin-top:0}
+input{width:100%;box-sizing:border-box;padding:16px;margin:8px 0 16px;border:1px solid #ccd9d2;border-radius:14px;font-size:18px}
+button{width:100%;padding:16px;border:0;border-radius:14px;background:#087a55;color:#fff;font-size:18px;font-weight:bold}
+#msg{margin-top:15px}
+</style>
+</head>
+<body>
+
+<div class="card">
+<h1>ตั้งรหัสผ่านใหม่</h1>
+
+<label>รหัสผ่านใหม่</label>
+<input id="password" type="password" minlength="6" placeholder="อย่างน้อย 6 ตัวอักษร">
+
+<label>ยืนยันรหัสผ่านใหม่</label>
+<input id="confirm" type="password" minlength="6" placeholder="กรอกรหัสผ่านอีกครั้ง">
+
+<button id="save">บันทึกรหัสผ่านใหม่</button>
+
+<div id="msg"></div>
+</div>
+
+<script>
+const URL="https://osqbqcgysyxmwutyhbeh.supabase.co";
+const KEY="sb_publishable_k1Y-P-o_UktDJdrbGr9eiw_tNRVvKEt";
+const sb=window.supabase.createClient(URL,KEY);
+
+document.getElementById("save").onclick=async()=>{
+  const password=document.getElementById("password").value;
+  const confirm=document.getElementById("confirm").value;
+  const msg=document.getElementById("msg");
+
+  if(password.length<6){
+    msg.textContent="รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร";
+    return;
+  }
+
+  if(password!==confirm){
+    msg.textContent="รหัสผ่านทั้งสองช่องไม่ตรงกัน";
+    return;
+  }
+
+  const {data:{session}}=await sb.auth.getSession();
+
+  if(!session){
+    msg.textContent="ลิงก์รีเซ็ตรหัสผ่านหมดอายุหรือไม่พบ Session กรุณาขอลิงก์ใหม่";
+    return;
+  }
+
+  const {error}=await sb.auth.updateUser({password});
+
+  if(error){
+    msg.textContent="ไม่สำเร็จ: "+error.message;
+  }else{
+    alert("ตั้งรหัสผ่านใหม่สำเร็จแล้ว");
+    window.location.href="./";
+  }
+};
+</script>
+
+</body>
+</html>
