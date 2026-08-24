@@ -37,6 +37,31 @@ const sb=window.supabase ? window.supabase.createClient(URL,KEY) : null;
 if(!sb){
   document.getElementById("msg").textContent="Supabase JavaScript โหลดไม่สำเร็จ กรุณาเปิดหน้านี้ใน Safari";
 }
+  (async()=>{
+  if(!sb) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code");
+
+  if(code){
+    const { error } = await sb.auth.exchangeCodeForSession(code);
+    if(error){
+      document.getElementById("msg").textContent =
+        "เปิดลิงก์รีเซ็ตไม่สำเร็จ: " + error.message;
+      return;
+    }
+  }
+
+  const { data:{session} } = await sb.auth.getSession();
+
+  if(session){
+    document.getElementById("msg").textContent =
+      "ลิงก์พร้อมแล้ว กรุณาตั้งรหัสผ่านใหม่";
+  }else{
+    document.getElementById("msg").textContent =
+      "ยังไม่พบ Session สำหรับรีเซ็ตรหัสผ่าน";
+  }
+})();
 document.getElementById("save").onclick=async()=>{
   const password=document.getElementById("password").value;
   const confirm=document.getElementById("confirm").value;
