@@ -78,6 +78,7 @@ document.getElementById("save").onclick=async()=>{
     return;
   }
 
+  document.getElementById("msg").textContent="Supabase พร้อมแล้ว กำลังตรวจ Session...";
   const {data:{session}}=await sb.auth.getSession();
 
   if(!session){
