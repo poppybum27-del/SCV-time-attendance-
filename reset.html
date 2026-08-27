@@ -35,6 +35,7 @@ alert("SCV JS ทำงานแล้ว");
 const URL="https://osqbqcgysyxmwutyhbeh.supabase.co";
 const KEY="sb_publishable_k1Y-P-o_UktDJdrbGr9eiw_tNRVvKEt";
 const sb=window.supabase ? window.supabase.createClient(URL,KEY) : null;
+document.getElementById("msg").textContent="เชื่อม Supabase แล้ว";
 if(!sb){
   document.getElementById("msg").textContent="Supabase JavaScript โหลดไม่สำเร็จ กรุณาเปิดหน้านี้ใน Safari";
 }
