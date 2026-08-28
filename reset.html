@@ -33,11 +33,11 @@ button{width:100%;padding:16px;border:0;border-radius:14px;background:#087a55;co
 <script>
 alert("SCV JS ทำงานแล้ว");
 alert("supabase = " + typeof window.supabase);
-const URL="https://osqbqcgysyxmwutyhbeh.supabase.co";
+const SUPABASE_URL="https://osqbqcgysyxmwutyhbeh.supabase.co";
 const KEY="sb_publishable_k1Y-P-o_UktDJdrbGr9eiw_tNRVvKEt";
 let sb=null;
 try{
-  sb=window.supabase.createClient(URL,KEY);
+  sb=window.supabase.createClient(SUPABASE_URL,KEY);
   document.getElementById("msg").textContent="เชื่อม Supabase แล้ว";
 }catch(e){
   document.getElementById("msg").textContent="Supabase Error: "+e.message;
