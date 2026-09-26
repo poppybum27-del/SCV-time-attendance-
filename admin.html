@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SCV Admin Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:#f2f7f4;
+      color:#17382c;
+    }
+    .wrap{max-width:1100px;margin:auto;padding:18px}
+    .top{
+      display:flex;justify-content:space-between;align-items:center;
+      gap:10px;margin-bottom:18px
+    }
+    h1{font-size:28px;margin:0}
+    .sub{color:#6e7f78;margin-top:5px}
+    button{
+      border:0;border-radius:14px;padding:12px 16px;
+      font-size:16px;font-weight:700;cursor:pointer
+    }
+    .green{background:#287552;color:white}
+    .light{background:white;color:#287552;border:1px solid #d6e4dd}
+    .controls{
+      background:white;border-radius:20px;padding:16px;
+      margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;
+      align-items:center
+    }
+    input{
+      padding:12px;border:1px solid #d6e4dd;
+      border-radius:12px;font-size:16px
+    }
+    .cards{
+      display:grid;grid-template-columns:repeat(3,1fr);
+      gap:12px;margin-bottom:16px
+    }
+    .card{
+      background:white;border-radius:20px;padding:18px;
+      box-shadow:0 2px 12px rgba(0,0,0,.04)
+    }
+    .big{font-size:30px;font-weight:800}
+    .label{color:#738079;margin-top:5px}
+    .tablebox{
+      background:white;border-radius:20px;padding:14px;
+      overflow:auto
+    }
+    table{width:100%;border-collapse:collapse;min-width:850px}
+    th,td{
+      padding:12px 10px;border-bottom:1px solid #edf1ef;
+      text-align:left;white-space:nowrap
+    }
+    th{background:#f6faf8}
+    .late{color:#d93025;font-weight:700}
+    .ot{color:#16834f;font-weight:700}
+    .muted{color:#86918c}
+    #msg{margin:12px 0;font-weight:600}
+    @media(max-width:700px){
+      .cards{grid-template-columns:1fr}
+      h1{font-size:23px}
+      .top{align-items:flex-start;flex-direction:column}
+    }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <h1>SCV Admin Dashboard</h1>
+      <div class="sub">สรุปเวลาเข้า–ออกงานของพนักงาน</div>
+    </div>
+    <button class="light" onclick="location.href='index.html'">← กลับหน้าลงเวลา</button>
+  </div>
+
+  <div class="controls">
+    <label><b>วันที่</b></label>
+    <input id="workDate" type="date">
+    <button class="green" id="loadBtn">รีเฟรชข้อมูล</button>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="big" id="employeeCount">0</div>
+      <div class="label">พนักงานทั้งหมด</div>
+    </div>
+
+    <div class="card">
+      <div class="big" id="lateCount">0</div>
+      <div class="label">มาสายวันนี้</div>
+    </div>
+
+    <div class="card">
+      <div class="big" id="otCount">0</div>
+      <div class="label">มี OT วันนี้</div>
+    </div>
+  </div>
+
+  <div id="msg"></div>
+
+  <div class="tablebox">
+    <table>
+      <thead>
+        <tr>
+          <th>รหัส</th>
+          <th>ชื่อพนักงาน</th>
+          <th>แผนก</th>
+          <th>เข้าเช้า</th>
+          <th>ออกเที่ยง</th>
+          <th>เข้าบ่าย</th>
+          <th>ออกงาน</th>
+          <th>สถานะ</th>
+          <th>OT</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL="https://osqbqcgysyxmwutyhbeh.supabase.co";
+const KEY="sb_publishable_k1Y-P-o_UktDJdrbGr9eiw_tNRVvKEt";
+const sb=window.supabase.createClient(SUPABASE_URL,KEY);
+
+const $=id=>document.getElementById(id);
+
+function thaiDateKey(){
+  return new Intl.DateTimeFormat("en-CA",{
+    timeZone:"Asia/Bangkok",
+    year:"numeric",
+    month:"2-digit",
+    day:"2-digit"
+  }).format(new Date());
+}
+
+function timeTH(v){
+  if(!v)return "-";
+  return new Intl.DateTimeFormat("th-TH",{
+    timeZone:"Asia/Bangkok",
+    hour:"2-digit",
+    minute:"2-digit",
+    second:"2-digit",
+    hour12:false
+  }).format(new Date(v));
+}
+
+function hm(v){
+  const d=new Date(v);
+  const parts=new Intl.DateTimeFormat("en-GB",{
+    timeZone:"Asia/Bangkok",
+    hour:"2-digit",
+    minute:"2-digit",
+    hourCycle:"h23"
+  }).formatToParts(d);
+
+  const h=Number(parts.find(x=>x.type==="hour").value);
+  const m=Number(parts.find(x=>x.type==="minute").value);
+  return {h,m};
+}
+
+function isLate(v){
+  if(!v)return false;
+  const {h,m}=hm(v);
+
+  if(h<12){
+    return h>8 || (h===8 && m>0);
+  }
+
+  return h>13 || (h===13 && m>0);
+}
+
+function calcOT(v){
+  if(!v)return 0;
+
+  const {h,m}=hm(v);
+  const mins=(h*60+m)-(17*60);
+
+  if(mins<20)return 0;
+
+  return Math.floor((mins+10)/30)/2;
+}
+
+async function checkAdmin(){
+  const {data:{session}}=await sb.auth.getSession();
+
+  if(!session){
+    location.href="index.html";
+    return false;
+  }
+
+  const {data:p,error}=await sb
+    .from("profiles")
+    .select("*")
+    .eq("id",session.user.id)
+    .single();
+
+  if(error || !p || p.role!=="admin"){
+    alert("หน้านี้สำหรับ Admin เท่านั้น");
+    location.href="index.html";
+    return false;
+  }
+
+  return true;
+}
+
+async function loadDashboard(){
+  $("msg").textContent="กำลังโหลดข้อมูล...";
+
+  const date=$("workDate").value;
+
+  const {data:profiles,error:pe}=await sb
+    .from("profiles")
+    .select("*")
+    .order("employee_code");
+
+  if(pe){
+    $("msg").textContent="อ่านรายชื่อพนักงานไม่ได้: "+pe.message;
+    return;
+  }
+
+  const {data:punches,error:ae}=await sb
+    .from("attendance_punches")
+    .select("*")
+    .eq("work_date",date)
+    .order("punched_at",{ascending:true});
+
+  if(ae){
+    $("msg").textContent="อ่านข้อมูลลงเวลาไม่ได้: "+ae.message;
+    return;
+  }
+
+  let lateTotal=0;
+  let otTotal=0;
+
+  $("employeeCount").textContent=profiles.length;
+
+  $("rows").innerHTML=profiles.map(p=>{
+    const list=punches.filter(x=>x.employee_id===p.id);
+
+    const ins=list.filter(x=>x.punch_type==="IN");
+    const outs=list.filter(x=>x.punch_type==="OUT");
+
+    const inMorning=ins[0]||null;
+    const outLunch=outs[0]||null;
+    const inAfternoon=ins[1]||null;
+    const outEvening=outs[1]||outs[0]||null;
+
+    const lateMorning=inMorning && isLate(inMorning.punched_at);
+    const lateAfternoon=inAfternoon && isLate(inAfternoon.punched_at);
+
+    const late=lateMorning || lateAfternoon;
+    if(late)lateTotal++;
+
+    const ot=outEvening ? calcOT(outEvening.punched_at) : 0;
+    if(ot>0)otTotal++;
+
+    const status=late
+      ? '<span class="late">🔴 สาย</span>'
+      : '<span class="muted">ปกติ</span>';
+
+    const otText=ot>0
+      ? `<span class="ot">🟢 ${ot} ชม.</span>`
+      : '-';
+
+    return `
+      <tr>
+        <td>${p.employee_code||"-"}</td>
+        <td>${p.full_name||p.email||"-"}</td>
+        <td>${p.department||"-"}</td>
+        <td>${timeTH(inMorning?.punched_at)}</td>
+        <td>${timeTH(outLunch?.punched_at)}</td>
+        <td>${timeTH(inAfternoon?.punched_at)}</td>
+        <td>${timeTH(outEvening?.punched_at)}</td>
+        <td>${status}</td>
+        <td>${otText}</td>
+      </tr>
+    `;
+  }).join("");
+
+  $("lateCount").textContent=lateTotal;
+  $("otCount").textContent=otTotal;
+  $("msg").textContent="✅ อัปเดตข้อมูลเรียบร้อย";
+}
+
+$("loadBtn").onclick=loadDashboard;
+
+(async()=>{
+  $("workDate").value=thaiDateKey();
+
+  const ok=await checkAdmin();
+  if(ok)loadDashboard();
+})();
+</script>
+
+</body>
+</html>
