@@ -29,6 +29,18 @@ button{border:0;border-radius:14px;padding:14px 16px;font-size:16px;font-weight:
 <section class="card"><div id="clock" class="clock"></div><div id="date" class="date"></div>
 <div class="loc"><b id="locStatus">กำลังตรวจ GPS...</b><div id="locDetail" class="muted"></div></div>
 <button id="gps" class="ghost full">ตรวจ GPS ใหม่</button>
+ <div style="margin:14px 0">
+  <label><b>สถานที่ทำงาน</b></label>
+  <select id="workMode" style="width:100%;padding:12px;border-radius:12px;margin-top:7px">
+    <option value="FACTORY">โรงงาน</option>
+    <option value="FIELD">งานนอกสถานที่</option>
+  </select>
+</div>
+
+<div id="fieldBox" class="hidden" style="margin:14px 0">
+  <label><b>ชื่อไซต์งาน / ลูกค้า</b></label>
+  <input id="siteName" placeholder="เช่น ลูกค้า ABC / ไซต์งานเชียงคาน" style="width:100%;padding:12px;margin-top:7px">
+</div>
 <div class="actions"><button id="in" class="green" disabled>เข้างาน</button><button id="out" class="soft" disabled>ออกงาน</button></div>
 <div id="punchMsg" class="msg"></div></section>
 <section class="card"><div class="row"><h2>ประวัติวันนี้</h2><button id="reload" class="ghost">รีเฟรช</button></div><div id="history" class="muted">ยังไม่มีรายการ</div></section>
