@@ -60,7 +60,7 @@ async function boot(){
  const {data:{session}}=await sb.auth.getSession();if(!session)return;
  const {data:p,error:pe}=await sb.from("profiles").select("*").eq("id",session.user.id).single();if(pe){$("loginMsg").textContent=pe.message;return}profile=p;
  const {data:c,error:ce}=await sb.from("company_settings").select("*").limit(1).single();if(ce){$("loginMsg").textContent=ce.message;return}company=c;
- 
+ profile=p;company=c;$("name").textContent=p.full_name||"-";$("meta").textContent=(p.employee_code||"-")+" • "+(p.role||"-");
  $("login").classList.add("hidden");$("app").classList.remove("hidden");await history();gps();
 }
 async function login(){const {error}=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(error){$("loginMsg").textContent=error.message;return}boot()}
