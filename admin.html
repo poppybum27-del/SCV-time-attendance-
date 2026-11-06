@@ -248,10 +248,10 @@ async function loadDashboard(){
     const ins=list.filter(x=>x.punch_type==="IN");
     const outs=list.filter(x=>x.punch_type==="OUT");
 
-    const inMorning=ins[0]||null;
-    const outLunch=outs[0]||null;
-    const inAfternoon=ins[1]||null;
-    const outEvening=outs[1]||outs[0]||null;
+    const inMorning=ins.find(x=>hm(x.punched_at).h<12)||null;
+    const outLunch=outs.find(x=>hm(x.punched_at).h<14)||null;
+    const inAfternoon=ins.find(x=>hm(x.punched_at).h>=12)||null;
+    const outEvening=outs.find(x=>hm(x.punched_at).h>=14)||null;
 
     const lateMorning=inMorning && isLate(inMorning.punched_at);
     const lateAfternoon=inAfternoon && isLate(inAfternoon.punched_at);
